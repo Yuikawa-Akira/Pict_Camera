@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pict Camera Editor</title>
+<style>
+  :root {
+    --bg: #14171a;
+    --panel: #1c2024;
+    --panel-2: #22272b;
+    --border: #30363a;
+    --text: #e8e6e1;
+    --text-dim: #9aa0a6;
+    --accent: #ff8a3d;
+    --accent-dim: #ff8a3d33;
+    --mono: 'SF Mono', 'Consolas', 'Menlo', monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 24px;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    letter-spacing: 0.02em;
+  }
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin: 0 0 20px;
+    font-family: var(--mono);
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel + .panel { margin-top: 16px; }
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+  .drop-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    padding: 24px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    color: var(--text);
+  }
+  .drop-zone input { display: none; }
+  .input-preview-wrap {
+    margin-top: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: #000;
+    display: none;
+  }
+  .input-preview-wrap.has-image { display: block; }
+  #inputPreviewCanvas {
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+    display: block;
+  }
+  .input-preview-meta {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 2px 0;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-dim);
+  }
+  .mode-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    background: var(--panel-2);
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .mode-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 6px;
+    font-size: 12.5px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-dim);
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+  }
+  .mode-tab.active {
+    background: var(--accent);
+    color: #1a1300;
+    font-weight: 600;
+  }
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .field-label {
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .field-value {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+  }
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid #1a1300;
+  }
+  .hint {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .reset-btn {
+    width: 100%;
+    margin-top: 14px;
+    padding: 9px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .download-btn {
+    width: 100%;
+    padding: 11px;
+    background: var(--accent);
+    border: none;
+    color: #1a1300;
+    border-radius: 6px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .download-btn:hover { filter: brightness(1.08); }
+  .download-btn:active { filter: brightness(0.92); }
+  .download-btn svg { width: 14px; height: 14px; }
+  .download-btn + .download-btn {
+    margin-top: 8px;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .download-btn + .download-btn:hover { border-color: var(--accent); filter: none; }
+
+  /* Palette editor */
+  .palette-editor { margin-top: 10px; }
+  .palette-mode-toggle {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+    background: var(--panel-2);
+    border-radius: 7px;
+    padding: 3px;
+  }
+  .palette-mode-btn {
+    flex: 1;
+    text-align: center;
+    padding: 6px 4px;
+    font-size: 11.5px;
+    border-radius: 5px;
+    cursor: pointer;
+    color: var(--text-dim);
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+  }
+  .palette-mode-btn.active {
+    background: var(--accent);
+    color: #1a1300;
+    font-weight: 600;
+  }
+  .custom-swatch-row {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 5px;
+    margin-top: 8px;
+  }
+  .custom-swatch {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .custom-swatch input[type="color"] {
+    position: absolute;
+    inset: -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  .custom-swatch-label {
+    position: absolute;
+    bottom: 1px;
+    left: 2px;
+    font-size: 8px;
+    color: rgba(255,255,255,0.6);
+    font-family: var(--mono);
+    pointer-events: none;
+    text-shadow: 0 0 2px #000;
+  }
+  .palette-hexlist {
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-dim);
+    background: var(--panel-2);
+    border-radius: 6px;
+    padding: 8px;
+    word-break: break-all;
+    user-select: all;
+  }
+
+  /* Preset palette picker (swatch grid, no list/names) */
+  .preset-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .preset-card {
+    border: 2px solid var(--border);
+    border-radius: 7px;
+    padding: 4px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .preset-card:hover { border-color: #565d64; }
+  .preset-card.active { border-color: var(--accent); }
+  .preset-card-swatches {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: 1fr;
+    gap: 1px;
+    aspect-ratio: 4;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  /* Preview / output */
+  .preview-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+  }
+  #dstCanvas {
+    width: 100%;
+    max-width: 960px;
+    height: auto;
+    image-rendering: pixelated;
+    border-radius: 6px;
+    background: #000;
+    display: block;
+    margin: 0 auto;
+  }
+  .input-preview-wrap canvas {
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+    display: block;
+  }
+  .stats {
+    margin-top: 10px;
+    margin-bottom: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<h1>Pict Camera Editor</h1>
+
+<div class="layout">
+  <div>
+    <div class="panel">
+      <p class="section-label">Input Image</p>
+      <div class="drop-zone" id="dropZone">
+        Drag & drop an image<br>or click to select
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+      <div class="input-preview-wrap" id="inputPreviewWrap">
+        <canvas id="inputPreviewCanvas"></canvas>
+        <div class="input-preview-meta" id="inputPreviewMeta"><span>&mdash;</span><span>&mdash;</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="section-label">Mode</p>
+      <div class="mode-tabs">
+        <div class="mode-tab" data-mode="digital8">Digital 8</div>
+        <div class="mode-tab active" data-mode="fast">Dither 8</div>
+      </div>
+
+      <div id="digital8Controls" style="display:none;">
+        <div class="field">
+          <div class="field-row">
+            <span class="field-label">Saturation (sat_factor_x128)</span>
+            <span class="field-value" id="satVal">256</span>
+          </div>
+          <input type="range" id="satFactor" min="0" max="512" step="8" value="256">
+        </div>
+        <div class="field">
+          <div class="field-row">
+            <span class="field-label">Sigmoid strength</span>
+            <span class="field-value" id="strengthVal">24.0</span>
+          </div>
+          <input type="range" id="strength" min="1" max="30" step="0.5" value="24">
+        </div>
+        <div class="field">
+          <div class="field-row">
+            <span class="field-label">Sigmoid midpoint</span>
+            <span class="field-value" id="midpointVal">0.50</span>
+          </div>
+          <input type="range" id="midpoint" min="0.2" max="0.8" step="0.01" value="0.50">
+        </div>
+        <div class="field">
+          <div class="field-row">
+            <span class="field-label">Bayer bias width (&plusmn;)</span>
+            <span class="field-value" id="biasVal">12</span>
+          </div>
+          <input type="range" id="biasWidth" min="0" max="40" step="1" value="12">
+        </div>
+        <div class="field palette-editor">
+          <div class="field-row">
+            <span class="field-label">Fixed 8-color palette</span>
+          </div>
+          <div class="custom-swatch-row" id="d8PaletteRow"></div>
+          <div class="palette-hexlist" id="d8PaletteHex"></div>
+          <button class="reset-btn" id="d8PaletteReset">Reset palette to default</button>
+        </div>
+      </div>
+
+      <div id="fastControls">
+        <div class="field">
+          <div class="field-row">
+            <span class="field-label">levelsPerChannel</span>
+            <span class="field-value" id="levelsVal">8</span>
+          </div>
+          <input type="range" id="levels" min="1" max="16" step="1" value="8">
+        </div>
+        <div class="field">
+          <div class="field-row">
+            <span class="field-label">Palette</span>
+          </div>
+          <div class="palette-mode-toggle">
+            <div class="palette-mode-btn active" data-pmode="preset">Preset</div>
+            <div class="palette-mode-btn" data-pmode="custom">Custom edit</div>
+          </div>
+          <div class="preset-grid" id="presetGrid"></div>
+          <div class="palette-editor" id="fastCustomEditor" style="display:none;">
+            <div class="custom-swatch-row" id="fastPaletteRow"></div>
+            <div class="palette-hexlist" id="fastPaletteHex"></div>
+            <button class="reset-btn" id="fastPaletteReset">Init from selected preset</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="reset-btn" id="resetBtn">Reset parameters to default</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="preview-box">
+      <canvas id="dstCanvas"></canvas>
+      <div class="stats" id="dstStats"><span>&mdash;</span><span>&mdash;</span></div>
+      <button class="download-btn" id="downloadBtn1x">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PNG (1x)
+      </button>
+      <button class="download-btn" id="downloadBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PNG (4x)
+      </button>
+      <button class="download-btn" id="downloadBtn2x">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PNG (8x)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- offscreen canvas for source image decode (not shown to user) -->
+<canvas id="srcCanvas" style="display:none;"></canvas>
+
+<script>
+// ============================================================
+// Ported from the .ino logic
+// ============================================================
+
+const DEFAULT_FIXED_PALETTE = [
+  0x000000, 0x0000FF, 0x00FF00, 0x00FFFF,
+  0xFF0000, 0xFF00FF, 0xFFFF00, 0xFFFFFF
+];
+let FixedColorPalette = DEFAULT_FIXED_PALETTE.slice();
+
+const ColorPalettes = [
+  [0x0D2B45, 0x203C56, 0x544E68, 0x8D697A, 0xD08159, 0xFFAA5E, 0xFFD4A3, 0xFFECD6], // #00 SLSO8 Created by Luis Miguel Maldonado
+  [0x252525, 0x252525, 0x4B564D, 0x4B564D, 0x9AA57C, 0x9AA57C, 0xE0E9C4, 0xE0E9C4], // #01 2BIT DEMIBOY Created by Space Sandwich
+  [0x292831, 0x292831, 0x333F58, 0x333F58, 0x4A7A96, 0xEE8695, 0xEE8695, 0xFBBBAD], // #02 TWILIGHT 5 Created by Star
+  [0x0D76D9, 0x3CADEC, 0x3CADEC, 0x71CDFC, 0x71CDFC, 0xBCE2FD, 0xBCE2FD, 0xFFFFFF], // #03 BLUE SKY 5 Created by Yuikawa-Akira
+  [0x334455, 0x334455, 0x334455, 0x334455, 0xFFBB33, 0xFFBB33, 0xFFBB33, 0xFFBB33], // #04 MUMBLEBEE Created by sudo_whoami
+  [0x3C42C4, 0x6E51C8, 0xA065CD, 0xCE79D2, 0xD68FB8, 0xDDA2A3 ,0xEAC4AE, 0xF4DFBE], // #05 DREAM HAZE 8 Created by Klafooty
+  [0x001D2A, 0x085562, 0x009A98, 0x00BE91, 0x38D88E, 0x9AF089, 0xF2FF66, 0xF2FF66], // #06 DEEP MAZE Created by Ryosuke
+  [0x000000, 0x012036, 0x3A7BAA, 0x7D8FAE, 0xA1B4C1, 0xF0B9B9, 0xFFD159, 0xFFFFFF], // #07 NIGHT RAIN Created by Maber
+  [0x000000, 0x000B22, 0x112B43, 0x437290, 0x437290, 0xE0D8D1, 0xE0D8D1, 0xFFFFFF], // #08 Inspired by 『都市伝説解体センター』
+  [0x010101, 0x33669F, 0x33669F, 0x33669F, 0x498DB7, 0x498DB7, 0xFBE379, 0xFBE379], // #09 Inspired by 『ファミレスを享受せよ』
+  [0x0E0E12, 0x1A1A24, 0x333346, 0x535373, 0x8080A4, 0xA6A6BF, 0xC1C1D2, 0xE6E6EC], // #10 GOTHIC BIT Created by HiroHi
+  [0x1E1C32, 0x1E1C32, 0x1E1C32, 0x1E1C32, 0xC6BAAC, 0xC6BAAC, 0xC6BAAC, 0xC6BAAC], // #11 NOIRE TRUTH Created by Cheeseismysoul
+  [0x002B59, 0x002B59, 0x005F8C, 0x005F8C, 0x00B9BE, 0x00B9BE, 0x9FF4E5, 0x9FF4E5], // #12 BLK AQU4 Created by BurakoIRL
+  [0x282836, 0x5D2939, 0x5D4F5D, 0x4E657A, 0x7F7F72, 0x88A267, 0x88C4D9, 0xE2C4B3], // #13 INDUSTRY 8 Created by Yuikawa-Akira
+  [0x192F3A, 0x203842, 0x324845, 0x324845, 0x5A665A, 0x5A665A, 0xA88A72, 0xB29279], // #14 DARK STREET 6 Created by Yuikawa-Akira
+  [0x0A143C, 0x0A143C, 0x3C4678, 0x3C4678, 0xA0508C, 0xA0508C, 0xBE82AA, 0xBE82AA], // #15 PURPLE DAWN 4 Created by Yuikawa-Akira
+];
+
+// Editable "custom" slot for Fast mode (starts as a copy of preset 0)
+let customFastPalette = ColorPalettes[0].slice();
+
+const BAYER4x4 = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5]
+];
+
+function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+// --- applyModulate_integer (saturation) ---
+function applyModulateInteger(r, g, b, satFactorX128) {
+  const cmax = Math.max(r, g, b);
+  const cmin = Math.min(r, g, b);
+  const delta = cmax - cmin;
+  if (delta === 0 || cmax === 0) return [r, g, b];
+
+  const newChroma = Math.min(Math.floor(delta * satFactorX128 / 128), cmax);
+  const m = cmax - newChroma;
+
+  if (cmax === r) {
+    if (g >= b) {
+      return [cmax, m + Math.floor(newChroma * (g - cmin) / delta), m];
+    } else {
+      return [cmax, m, m + Math.floor(newChroma * (b - cmin) / delta)];
+    }
+  } else if (cmax === g) {
+    if (r >= b) {
+      return [m + Math.floor(newChroma * (r - cmin) / delta), cmax, m];
+    } else {
+      return [m, cmax, m + Math.floor(newChroma * (b - cmin) / delta)];
+    }
+  } else {
+    if (g >= r) {
+      return [m, m + Math.floor(newChroma * (g - cmin) / delta), cmax];
+    } else {
+      return [m + Math.floor(newChroma * (r - cmin) / delta), m, cmax];
+    }
+  }
+}
+
+// --- initSigmoidContrastLUT ---
+function buildSigmoidLUT(strength, midpoint) {
+  const lut = new Uint8Array(256);
+  const sig0 = 1.0 / (1.0 + Math.exp(-strength * (0.0 - midpoint)));
+  const sig1 = 1.0 / (1.0 + Math.exp(-strength * (1.0 - midpoint)));
+  for (let i = 0; i < 256; i++) {
+    const x = i / 255.0;
+    let y = x * (sig1 - sig0) + sig0;
+    y = clamp(y, 0.0001, 0.9999);
+    const result = midpoint - Math.log(1.0 / y - 1.0) / strength;
+    lut[i] = clamp(Math.round(result * 255.0), 0, 255);
+  }
+  return lut;
+}
+
+// --- calculate_weighted_distance_sq / quantize_color_to_closest ---
+function quantizeToClosest(r, g, b) {
+  let minDist = -1;
+  let closest = 0;
+  for (let i = 0; i < FixedColorPalette.length; i++) {
+    const pc = FixedColorPalette[i];
+    const rp = (pc >> 16) & 0xFF, gp = (pc >> 8) & 0xFF, bp = pc & 0xFF;
+    const dr = r - rp, dg = g - gp, db = b - bp;
+    const dist = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
+    if (minDist === -1 || dist < minDist) {
+      minDist = dist;
+      closest = pc;
+    }
+  }
+  return [(closest >> 16) & 0xFF, (closest >> 8) & 0xFF, closest & 0xFF];
+}
+
+// --- applyDitherAndPalette_565to888_Fast_digital8 ---
+function processDigital8(imgData, params) {
+  const { width, height, data } = imgData;
+  const out = new Uint8ClampedArray(data.length);
+  const lut = buildSigmoidLUT(params.strength, params.midpoint);
+
+  for (let y = 0; y < height; y++) {
+    const yIdx = y & 3;
+    for (let x = 0; x < width; x++) {
+      const xIdx = x & 3;
+      const i = (y * width + x) * 4;
+
+      let r = data[i], g = data[i + 1], b = data[i + 2];
+
+      // Stage 1: saturation boost
+      [r, g, b] = applyModulateInteger(r, g, b, params.satFactorX128);
+
+      // Stage 2: inverse sigmoid
+      r = lut[r]; g = lut[g]; b = lut[b];
+
+      // Stage 3: dithering (centered bias + 8-level quantize)
+      const bv = BAYER4x4[yIdx][xIdx];
+      const bw = params.biasWidth;
+      const bayerBias = Math.floor((bv * (bw * 2)) / 16) - bw;
+
+      const quantize8 = (val) => {
+        val = clamp(val + bayerBias, 0, 255);
+        const step = Math.floor((val * 7 + 127) / 255);
+        return Math.floor(step * 255 / 7);
+      };
+
+      const rt = quantize8(r), gt = quantize8(g), bt = quantize8(b);
+
+      // Stage 4: nearest-neighbor palette mapping
+      const [ro, go, bo] = quantizeToClosest(rt, gt, bt);
+
+      out[i] = ro; out[i + 1] = go; out[i + 2] = bo; out[i + 3] = 255;
+    }
+  }
+  return new ImageData(out, width, height);
+}
+
+// --- applyDitherAndPalette_565to888_Fast ---
+function processFast(imgData, levelsPerChannel, paletteArr) {
+  const { width, height, data } = imgData;
+  const out = new Uint8ClampedArray(data.length);
+  const targetPalette = paletteArr;
+
+  if (levelsPerChannel <= 1) {
+    for (let p = 0; p < width * height; p++) {
+      const i = p * 4;
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const luminance = (54 * r + 183 * g + 19 * b) >> 8;
+      let grayLevel = luminance >> 5;
+      if (grayLevel > 7) grayLevel = 7;
+      const pc = targetPalette[grayLevel];
+      out[i] = (pc >> 16) & 0xFF;
+      out[i + 1] = (pc >> 8) & 0xFF;
+      out[i + 2] = pc & 0xFF;
+      out[i + 3] = 255;
+    }
+    return new ImageData(out, width, height);
+  }
+
+  const intervals = levelsPerChannel - 1;
+  const quantizedValues = new Uint8Array(256);
+  for (let i = 0; i <= intervals; i++) {
+    quantizedValues[i] = Math.floor((i * 255 + Math.floor(intervals / 2)) / intervals);
+  }
+  const baseLevel = new Uint8Array(256);
+  const errorScaled16 = new Uint16Array(256);
+  for (let i = 0; i < 256; i++) {
+    const valScaled = i * intervals;
+    let lIdx = Math.floor(valScaled / 255);
+    if (lIdx >= intervals) lIdx = intervals - 1;
+    baseLevel[i] = lIdx;
+    errorScaled16[i] = (valScaled - lIdx * 255) * 16;
+  }
+
+  for (let y = 0; y < height; y++) {
+    const yIdx = y & 3;
+    for (let x = 0; x < width; x++) {
+      const xIdx = x & 3;
+      const bayerThresh = BAYER4x4[yIdx][xIdx] * 255;
+      const i = (y * width + x) * 4;
+
+      const channelsSrc = [data[i], data[i + 1], data[i + 2]];
+      const channelsDithered = [0, 0, 0];
+
+      for (let ch = 0; ch < 3; ch++) {
+        const valSrc = channelsSrc[ch];
+        let lIdx = baseLevel[valSrc];
+        if (errorScaled16[valSrc] >= bayerThresh) lIdx++;
+        channelsDithered[ch] = quantizedValues[lIdx];
+      }
+
+      const [rd, gd, bd] = channelsDithered;
+      const luminance = (54 * rd + 183 * gd + 19 * bd) >> 8;
+      let grayLevel = luminance >> 5;
+      if (grayLevel > 7) grayLevel = 7;
+      const pc = targetPalette[grayLevel];
+
+      out[i] = (pc >> 16) & 0xFF;
+      out[i + 1] = (pc >> 8) & 0xFF;
+      out[i + 2] = pc & 0xFF;
+      out[i + 3] = 255;
+    }
+  }
+  return new ImageData(out, width, height);
+}
+
+// ============================================================
+// UI control
+// ============================================================
+
+const srcCanvas = document.getElementById('srcCanvas');
+const dstCanvas = document.getElementById('dstCanvas');
+const srcCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
+const dstCtx = dstCanvas.getContext('2d');
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+let currentImageData = null;
+let currentMode = 'fast';
+let fastPaletteMode = 'preset'; // 'preset' | 'custom'
+let selectedPresetIndex = 0;
+
+const els = {
+  satFactor: document.getElementById('satFactor'),
+  satVal: document.getElementById('satVal'),
+  strength: document.getElementById('strength'),
+  strengthVal: document.getElementById('strengthVal'),
+  midpoint: document.getElementById('midpoint'),
+  midpointVal: document.getElementById('midpointVal'),
+  biasWidth: document.getElementById('biasWidth'),
+  biasVal: document.getElementById('biasVal'),
+  levels: document.getElementById('levels'),
+  levelsVal: document.getElementById('levelsVal'),
+};
+
+function hex6(c) { return '#' + c.toString(16).padStart(6, '0').toUpperCase(); }
+function hexToInt(hexStr) { return parseInt(hexStr.replace('#', ''), 16); }
+
+function getActiveFastPalette() {
+  return fastPaletteMode === 'custom' ? customFastPalette : ColorPalettes[selectedPresetIndex];
+}
+
+// ---- Preset picker: swatch-grid cards, no names/list ----
+function renderPresetGrid() {
+  const grid = document.getElementById('presetGrid');
+  grid.innerHTML = '';
+  ColorPalettes.forEach((pal, idx) => {
+    const card = document.createElement('div');
+    card.className = 'preset-card' + (idx === selectedPresetIndex ? ' active' : '');
+    const sw = document.createElement('div');
+    sw.className = 'preset-card-swatches';
+    pal.forEach(c => {
+      const cell = document.createElement('div');
+      cell.style.background = hex6(c);
+      sw.appendChild(cell);
+    });
+    card.appendChild(sw);
+    card.addEventListener('click', () => {
+      selectedPresetIndex = idx;
+      renderPresetGrid();
+      runProcessing();
+    });
+    grid.appendChild(card);
+  });
+}
+
+// ---- digital8: FixedColorPalette (8 colors) editor ----
+function renderD8PaletteEditor() {
+  const row = document.getElementById('d8PaletteRow');
+  row.innerHTML = '';
+  FixedColorPalette.forEach((c, i) => {
+    const box = document.createElement('div');
+    box.className = 'custom-swatch';
+    box.style.background = hex6(c);
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.value = hex6(c);
+    input.addEventListener('input', () => {
+      FixedColorPalette[i] = hexToInt(input.value);
+      box.style.background = input.value;
+      updateD8PaletteHex();
+      runProcessing();
+    });
+    const label = document.createElement('span');
+    label.className = 'custom-swatch-label';
+    label.textContent = i;
+    box.appendChild(input);
+    box.appendChild(label);
+    row.appendChild(box);
+  });
+  updateD8PaletteHex();
+}
+function updateD8PaletteHex() {
+  document.getElementById('d8PaletteHex').textContent = FixedColorPalette.map(hex6).join(' ');
+}
+
+// ---- Fast: custom palette (8 colors) editor ----
+function renderFastPaletteEditor() {
+  const row = document.getElementById('fastPaletteRow');
+  row.innerHTML = '';
+  customFastPalette.forEach((c, i) => {
+    const box = document.createElement('div');
+    box.className = 'custom-swatch';
+    box.style.background = hex6(c);
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.value = hex6(c);
+    input.addEventListener('input', () => {
+      customFastPalette[i] = hexToInt(input.value);
+      box.style.background = input.value;
+      updateFastPaletteHex();
+      runProcessing();
+    });
+    const label = document.createElement('span');
+    label.className = 'custom-swatch-label';
+    label.textContent = i;
+    box.appendChild(input);
+    box.appendChild(label);
+    row.appendChild(box);
+  });
+  updateFastPaletteHex();
+}
+function updateFastPaletteHex() {
+  document.getElementById('fastPaletteHex').textContent = customFastPalette.map(hex6).join(' ');
+}
+
+renderPresetGrid();
+renderD8PaletteEditor();
+renderFastPaletteEditor();
+
+function updateValueLabels() {
+  els.satVal.textContent = els.satFactor.value;
+  els.strengthVal.textContent = parseFloat(els.strength.value).toFixed(1);
+  els.midpointVal.textContent = parseFloat(els.midpoint.value).toFixed(2);
+  els.biasVal.textContent = els.biasWidth.value;
+  els.levelsVal.textContent = els.levels.value;
+}
+
+const MODE_DISPLAY_LABEL = {
+  digital8: 'Digital 8',
+  fast: 'Dither 8',
+};
+
+function runProcessing() {
+  if (!currentImageData) return;
+  let result;
+  if (currentMode === 'digital8') {
+    result = processDigital8(currentImageData, {
+      satFactorX128: parseInt(els.satFactor.value),
+      strength: parseFloat(els.strength.value),
+      midpoint: parseFloat(els.midpoint.value),
+      biasWidth: parseInt(els.biasWidth.value),
+    });
+  } else {
+    result = processFast(currentImageData, parseInt(els.levels.value), getActiveFastPalette());
+  }
+  dstCanvas.width = result.width;
+  dstCanvas.height = result.height;
+  dstCtx.putImageData(result, 0, 0);
+
+  document.getElementById('dstStats').innerHTML =
+    `<span>${result.width}&times;${result.height}</span><span>${MODE_DISPLAY_LABEL[currentMode] || currentMode}</span>`;
+}
+
+const inputPreviewCanvas = document.getElementById('inputPreviewCanvas');
+const inputPreviewCtx = inputPreviewCanvas.getContext('2d');
+const inputPreviewWrap = document.getElementById('inputPreviewWrap');
+const inputPreviewMeta = document.getElementById('inputPreviewMeta');
+
+function updateInputPreview(w, h, label) {
+  inputPreviewCanvas.width = w;
+  inputPreviewCanvas.height = h;
+  inputPreviewCtx.putImageData(currentImageData, 0, 0);
+  inputPreviewMeta.innerHTML = `<span>${w}&times;${h}</span><span>${label}</span>`;
+  inputPreviewWrap.classList.add('has-image');
+}
+
+function loadImage(file) {
+  const img = new Image();
+  img.onload = () => {
+    // Downscale to ~240px wide to approximate the device resolution
+    const maxW = 240;
+    const scale = Math.min(1, maxW / img.width);
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+
+    srcCanvas.width = w;
+    srcCanvas.height = h;
+    srcCtx.drawImage(img, 0, 0, w, h);
+    currentImageData = srcCtx.getImageData(0, 0, w, h);
+
+    updateInputPreview(w, h, file.name || 'image');
+    runProcessing();
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+// ---- Save filename: YYYYMMDD_HHMMSS_{mode}.png ----
+const MODE_FILENAME_PREFIX = {
+  digital8: 'digtal8',
+  fast: 'dither8',
+};
+function buildTimestampFilename(suffix) {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const ts = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  return `${ts}_${suffix}.png`;
+}
+
+// ---- 4x nearest-neighbor upscale (the standard save), then export as PNG ----
+// BASE_SCALE = 4 matches the 4x preview. The "(2x)" button doubles that
+// again relative to the preview, i.e. 8x relative to the actual image.
+const BASE_SCALE = 4;
+
+function downloadProcessedImage(scale) {
+  if (!currentImageData) return;
+  const w = dstCanvas.width, h = dstCanvas.height;
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = w * scale;
+  outCanvas.height = h * scale;
+  const outCtx = outCanvas.getContext('2d');
+  outCtx.imageSmoothingEnabled = false;
+  outCtx.drawImage(dstCanvas, 0, 0, w, h, 0, 0, w * scale, h * scale);
+
+  const modeName = MODE_FILENAME_PREFIX[currentMode] || currentMode;
+  const filename = buildTimestampFilename(`${modeName}_${scale}x`);
+  outCanvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
+}
+
+// Event wiring
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files[0]) loadImage(e.target.files[0]);
+});
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
+});
+
+document.querySelectorAll('.mode-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentMode = tab.dataset.mode;
+    document.getElementById('digital8Controls').style.display = currentMode === 'digital8' ? 'block' : 'none';
+    document.getElementById('fastControls').style.display = currentMode === 'fast' ? 'block' : 'none';
+    runProcessing();
+  });
+});
+
+[els.satFactor, els.strength, els.midpoint, els.biasWidth, els.levels].forEach(el => {
+  el.addEventListener('input', () => {
+    updateValueLabels();
+    runProcessing();
+  });
+});
+
+// Fast palette mode toggle (preset / custom edit)
+document.querySelectorAll('.palette-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.palette-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    fastPaletteMode = btn.dataset.pmode;
+    document.getElementById('fastCustomEditor').style.display = fastPaletteMode === 'custom' ? 'block' : 'none';
+    document.getElementById('presetGrid').style.opacity = (fastPaletteMode === 'custom') ? '0.4' : '1';
+    document.getElementById('presetGrid').style.pointerEvents = (fastPaletteMode === 'custom') ? 'none' : 'auto';
+    runProcessing();
+  });
+});
+
+document.getElementById('d8PaletteReset').addEventListener('click', () => {
+  FixedColorPalette = DEFAULT_FIXED_PALETTE.slice();
+  renderD8PaletteEditor();
+  runProcessing();
+});
+
+document.getElementById('fastPaletteReset').addEventListener('click', () => {
+  customFastPalette = ColorPalettes[selectedPresetIndex].slice();
+  renderFastPaletteEditor();
+  runProcessing();
+});
+
+document.getElementById('downloadBtn1x').addEventListener('click', () => downloadProcessedImage(1));
+document.getElementById('downloadBtn').addEventListener('click', () => downloadProcessedImage(BASE_SCALE));
+document.getElementById('downloadBtn2x').addEventListener('click', () => downloadProcessedImage(BASE_SCALE * 2));
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  els.satFactor.value = 256;
+  els.strength.value = 24;
+  els.midpoint.value = 0.50;
+  els.biasWidth.value = 12;
+  els.levels.value = 8;
+  selectedPresetIndex = 0;
+  FixedColorPalette = DEFAULT_FIXED_PALETTE.slice();
+  fastPaletteMode = 'preset';
+  document.querySelectorAll('.palette-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.pmode === 'preset'));
+  document.getElementById('fastCustomEditor').style.display = 'none';
+  document.getElementById('presetGrid').style.opacity = '1';
+  document.getElementById('presetGrid').style.pointerEvents = 'auto';
+  updateValueLabels();
+  renderPresetGrid();
+  renderD8PaletteEditor();
+  runProcessing();
+});
+
+updateValueLabels();
+
+// Generate an initial sample image (gradient + shapes) so the preview isn't empty
+(function generateSample() {
+  const w = 240, h = 176;
+  srcCanvas.width = w; srcCanvas.height = h;
+  const g = srcCtx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#4a90d9');
+  g.addColorStop(0.45, '#cfe8ff');
+  g.addColorStop(0.451, '#3a6b3a');
+  g.addColorStop(1, '#1f3d1f');
+  srcCtx.fillStyle = g;
+  srcCtx.fillRect(0, 0, w, h);
+  srcCtx.fillStyle = '#222';
+  srcCtx.beginPath();
+  srcCtx.moveTo(30, 100); srcCtx.lineTo(55, 60); srcCtx.lineTo(80, 100);
+  srcCtx.closePath(); srcCtx.fill();
+  srcCtx.fillStyle = '#cc3322';
+  srcCtx.beginPath(); srcCtx.arc(180, 50, 20, 0, Math.PI * 2); srcCtx.fill();
+
+  currentImageData = srcCtx.getImageData(0, 0, w, h);
+  updateInputPreview(w, h, 'sample');
+  runProcessing();
+})();
+</script>
+</body>
+</html>
