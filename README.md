@@ -64,6 +64,17 @@ microSD カードのルートディレクトリに以下のようなファイル
 ブラウザ上で変換パラメータやパレットを試せるシミュレーターも同梱しています。  
 実機に書き込む前に、パラメータの当たりをつけたり、パレットを編集したりするのに利用できます。
 
+## OBS Shader
+OBS上でリアルタイムで動作するシェーダーフィルタとしても利用できます。  
+
+### 導入手順
+
+![obs_shader](https://github.com/Yuikawa-Akira/Pict_Camera/blob/main/images/obs_shader.png)　　
+
+1. [obs-shaderfilter](https://github.com/exeldro/obs-shaderfilter)  をインストール
+2. Webカメラなど加工したいソースを右クリック → フィルタ → エフェクトフィルタ → 「User-defined shader」を追加
+3. 「Load shader text from file」を有効にして pict_camera.shader を選択（Use Effect File (.effect) はチェックしない）
+
 ## License
 
 [MIT License](./LICENSE)
