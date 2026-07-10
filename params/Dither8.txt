@@ -1,0 +1,2 @@
+dithering_levels=8
+dithering_enabled=true
