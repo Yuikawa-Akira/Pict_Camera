@@ -1,0 +1,4 @@
+sat_factor_x128=256
+sigmoid_strength=24.0
+sigmoid_midpoint=0.50
+bias_width=12
