@@ -349,14 +349,17 @@ bool CameraBegin() {
 
   // カメラ追加設定
   sensor_t* s = esp_camera_sensor_get();
-  s->set_hmirror(s, 0);         // 左右反転 0無効 1有効 ひっくり返して使う場合は1
-  s->set_vflip(s, 0);           // 上下反転 0無効 1有効 ひっくり返して使う場合は1
-  s->set_saturation(s, 0);      // 彩度 (-2〜2)
-  s->set_ae_level(s, 0);        // 自動露出 (-2〜2)
-  s->set_contrast(s, 0);        // コントラスト (-2〜2) 0を推奨
-  s->set_special_effect(s, 0);  // ノーマル/ネガ/モノクロ (0〜6)(ただし3〜6は未対応)
-  s->set_wb_mode(s, 0);         // オート/晴天/曇天/電球/蛍光灯 (0〜4) オートを推奨
+  //s->set_saturation(s, 0);      // 彩度 (-2〜2)
+  //s->set_ae_level(s, 0);        // 自動露出 (-2〜2)
+  //s->set_contrast(s, 0);        // コントラスト (-2〜2) 0を推奨
+  //s->set_special_effect(s, 0);  // ノーマル/ネガ/モノクロ (0〜6)(ただし3〜6は未対応)
+  //s->set_wb_mode(s, 0);         // オート/晴天/曇天/電球/蛍光灯 (0〜4) オートを推奨
   //s->set_colorbar(s, 1);        // カラーバー 0無効 1有効
+
+  // 上下左右反転
+  // GC0308: page 0 / CISCTL_MODE1 (0x14) の bit 0, 1 を同時に 1 にする
+  //s->set_reg(s, 0xFE, 0xFF, 0x00);  // page 0 を選択
+  //s->set_reg(s, 0x14, 0x03, 0x03);
   return true;
 }
 
